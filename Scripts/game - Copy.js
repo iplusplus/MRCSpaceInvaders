@@ -17,17 +17,15 @@ function initialize() {
         var self = this;
 
         var tick = function () {
-            self.update(self, gameSize);
+            self.update();
             self.draw(screen, gameSize);
             requestAnimationFrame(tick);
-
         };
         tick();
 
     };
     Game.prototype = {
-        update: function (game, gameSize) {
-
+        update: function () {
             var bodies = this.bodies;
             var notCollidingWithAnything = function (b1) {
                 return bodies.filter(function (b2) {
@@ -36,16 +34,13 @@ function initialize() {
             };
 
             this.bodies = this.bodies.filter(notCollidingWithAnything);
-
+            //randomly add tanks.
+            if (Math.random() > 0.998) {
+                this.bodies.push(new Tank(game, {x: game.gameSize.x, y: 0}));
+            }
             for (var i = 0; i < this.bodies.length; i++) {
                 this.bodies[i].update();
-            }
-
-            //randomly add tanks.
-            if (Math.random() > 0.994) {
-                console.log("added a tank with centre " + gameSize.x);
-                game.addBody(new Tank(game, { x: gameSize.x / 2, y: gameSize.y - 12 }, gameSize));
-            }
+            }       
 
         },
         draw: function (screen, gameSize) {
@@ -169,6 +164,7 @@ function initialize() {
                 this.bulletCtr = 0;
             }
         }
+
     };
 
     var Bullet = function (center, velocity) {
@@ -188,138 +184,105 @@ function initialize() {
     };
 
     var Invader = function (game, center) {
-        this.game = game;
-        this.size = {
-            x: 15,
-            y: 15
-        };
-        this.center = center;
-        this.patrolX = 0;
-        this.speedX = 0.3;
-    };
-
-    Invader.prototype = {
-        update: function () {
-            if (this.patrolX < 0 || this.patrolX > 40) {
-                this.speedX = -this.speedX;
+   
+        var createInvaders = function (game) {
+            var invaders = [];
+            for (var i = 0; i < 24; i++) {
+                var x = 30 + (i % 8) * 30;
+                var y = 30 + (i % 3) * 30;
+                invaders.push(new Invader(game, {
+                    x: x,
+                    y: y
+                }));
             }
-            this.center.x += this.speedX;
-            this.patrolX += this.speedX;
-
-            if (Math.random() > 0.995 && !this.game.invadersBelow(this)) {
-                //if (Math.random() > 0.995) {
-
-                var bullet = new Bullet({
-                    x: this.center.x,
-                    y: this.center.y + this.size.x / 2
-                }, {
-                    x: Math.random() - 0.5,
-                    y: 2
-                });
-                this.game.addBody(bullet);
-            }
-        }
-    };
-
-    var createInvaders = function (game) {
-        var invaders = [];
-        for (var i = 0; i < 24; i++) {
-            var x = 30 + (i % 8) * 30;
-            var y = 30 + (i % 3) * 30;
-            invaders.push(new Invader(game, {
-                x: x,
-                y: y
-            }));
-        }
-        return invaders;
-    };
-
-    var Tank = function (game, center, gameSize) {
-        this.game = game;
-        this.center = center;
-        this.gameSize = gameSize;
-        this.size = {
-            x: 25,
-            y: 12
+            return invaders;
         };
 
-        this.tankDir;
-        if (center.x > this.gameSize.x / 2) {
-            this.tankDir = 1;
-        } else {
-            this.tankDir = -1;
-        }
+        var Tank = function (game, center){
+            this.game = game;
+            this.size = {
+                x: 25,
+                y: 12
+            };
 
-        this.patrolX = 0;
-        this.speedX = 0.3;
-    };
-
-    Tank.prototype = {
-        update: function () {
-            if (this.patrolX < 0 || this.patrolX > this.gameSize.x) {
-                this.tankDir = -this.tankDir;
+            this.tankDir;
+            if (center > game.gameSize.x / 2) {
+                this.tankDir = -1;
+            }else {
+                this.tankDir = 1;
             }
 
-            this.center.x += this.speedX;
-            this.patrolX += this.speedX;
-            // 
-            if (Math.random() > 0.998) {
-                var bullet = new Bullet({
-                    x: this.center.x + this.size.y / 2,
-                    y: this.center.y
-                }, {
-                    x: 2 * this.tankDir,
-                    y: 0
-                });
-                this.game.addBody(bullet);
+            this.center = center;
+            this.patrolX = 0;
+            this.speedX = 0.3;
+        };
+
+        Tank.prototype = {
+            update: function () {
+                if (this.patrolX < 0 || this.patrolX > game.gameSize.x) {
+                    this.tankDir = -this.tankDir;
+                }
+                this.center.x += this.speedX;
+                this.patrolX += this.speedX;
+
+                // 
+                if (Math.random() > 0.998) {
+                    var bullet = new Bullet({
+                        x: this.center.x + this.size.y / 2,
+                        y: this.center.y
+                    }, {
+                        x: 2 * this.tankDir,
+                        y: 0
+                    });
+                    this.game.addBody(bullet);
+                }
             }
+        };
+
+        var drawRect = function (screen, body) {
+            screen.fillRect(body.center.x - body.size.x / 2,
+            body.center.y - body.size.y / 2,
+            body.size.x, body.size.y);
         }
+
+        var Keyboarder = function () {
+            var keyState = {};
+            window.onkeydown = function (e) {
+                keyState[e.keyCode] = true;
+            };
+            window.onkeyup = function (e) {
+                keyState[e.keyCode] = false;
+            };
+            this.isDown = function (keyCode) {
+                return keyState[keyCode] === true;
+            };
+
+            // catch the UP key for use with jumping.
+            this.KEYS = {
+                LEFT: 37,
+                UP: 38,
+                RIGHT: 39,
+                SPACE: 32
+            };
+        };
+
+        var colliding = function (b1, b2) {
+            return !(b1 === b2 || b1.center.x + b1.size.x / 2 < b2.center.x - b2.size.x / 2 || b1.center.y + b1.size.y / 2 < b2.center.y - b2.size.x / 2 || b1.center.x - b1.size.x / 2 > b2.center.x + b2.size.x / 2 || b1.center.y - b1.size.y / 2 > b2.center.y + b2.size.x / 2);
+        };
+
+        /*var loadSound = function (url, callback) {
+           console.log("ben");
+           var loaded = function () {
+               callback(sound);
+               sound.removeEventListener('canplaythrough', loaded);
+           }
+           console.log(callback);
+           console.log(loaded);
+           var sound = new Audio(url);
+           console.log(sound);
+           sound.addEventListener('canplaythrough', loaded);
+           sound.load();
+       };*/
+
+        new Game("screen");
     };
-
-    var drawRect = function (screen, body) {
-        screen.fillRect(body.center.x - body.size.x / 2,
-        body.center.y - body.size.y / 2,
-        body.size.x, body.size.y);
-    }
-
-    var Keyboarder = function () {
-        var keyState = {};
-        window.onkeydown = function (e) {
-            keyState[e.keyCode] = true;
-        };
-        window.onkeyup = function (e) {
-            keyState[e.keyCode] = false;
-        };
-        this.isDown = function (keyCode) {
-            return keyState[keyCode] === true;
-        };
-
-        // catch the UP key for use with jumping.
-        this.KEYS = {
-            LEFT: 37,
-            UP: 38,
-            RIGHT: 39,
-            SPACE: 32
-        };
-    };
-
-    var colliding = function (b1, b2) {
-        return !(b1 === b2 || b1.center.x + b1.size.x / 2 < b2.center.x - b2.size.x / 2 || b1.center.y + b1.size.y / 2 < b2.center.y - b2.size.x / 2 || b1.center.x - b1.size.x / 2 > b2.center.x + b2.size.x / 2 || b1.center.y - b1.size.y / 2 > b2.center.y + b2.size.x / 2);
-    };
-
-    /*var loadSound = function (url, callback) {
-       console.log("ben");
-       var loaded = function () {
-           callback(sound);
-           sound.removeEventListener('canplaythrough', loaded);
-       }
-       console.log(callback);
-       console.log(loaded);
-       var sound = new Audio(url);
-       console.log(sound);
-       sound.addEventListener('canplaythrough', loaded);
-       sound.load();
-   };*/
-
-    new Game("screen");
-};
