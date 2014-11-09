@@ -50,7 +50,6 @@ function initialize() {
 
             //randomly add tanks.
             if (!this.tankActive && (Math.random() > 0.994)) {
-                console.log("added a tank with centre " + gameSize.x);
                 // randomise start position
                 game.addBody(new Tank(game, { x: (Math.random() < 0.5 ? 0 : gameSize.x), y: gameSize.y - 12 }, gameSize));
                 this.tankActive = true;
@@ -60,7 +59,6 @@ function initialize() {
         draw: function (screen, gameSize) {
             //screen.fillRect(30, 30, 40, 40);
             screen.clearRect(0, 0, gameSize.x, gameSize.y);
-            console.log(this.bodies.length);
             for (var i = 0; i < this.bodies.length; i++) {
                 if (typeof this.bodies[i] != 'undefined') {
                     drawRect(screen, this.bodies[i]);
@@ -94,7 +92,7 @@ function initialize() {
         this.velY = 0;
         // this is the inital jump velocity in pixels per frame
         this.JUMP_VELOCITY = -9;
-        // this is the acceleration due to gravity.
+        // this is gravity.
         this.GRAVITY = 0.6
         // record starting y as this is 'ground' level
         this.startY = this.center.y;
@@ -102,7 +100,7 @@ function initialize() {
         this.BULLET_SPEED = -6;
         this.BULLET_RESET = 1;
         this.bulletCtr = 0;
-        this.lastDirection = -2;
+        this.lastDirection = -3;
 
         this.keyboarder = new Keyboarder();
         this.bodyType = "goodGuy";
@@ -129,12 +127,12 @@ function initialize() {
             // adjusted these to be separate 'if' statements to allow jump while strafing.
             if (this.keyboarder.isDown(this.keyboarder.KEYS.LEFT)) {
                 this.center.x -= 2;
-                this.lastDirection = -2;
+                this.lastDirection = -3;
             }
 
             if (this.keyboarder.isDown(this.keyboarder.KEYS.RIGHT)) {
                 this.center.x += 2;
-                this.lastDirection = 2;
+                this.lastDirection = 3;
             }
 
             if (this.keyboarder.isDown(this.keyboarder.KEYS.UP) && (this.center.y === this.startY)) {
@@ -150,6 +148,7 @@ function initialize() {
                 if (bulletVelocity >= -3) {
                     bulletVelocity = -3
                 }
+
                 // Only allow this.BULLET_RESET volly size.
                 if (this.bulletCtr < this.BULLET_RESET) {
                     var bullet = new Bullet({
@@ -161,25 +160,23 @@ function initialize() {
                         y: bulletVelocity
                     },// add reference so we know who to attack
                         this);
-                    //if jumping, fire a bullet
-                    console.log("center.y is " + this.center.y + " and " + this.startY);
-                    if (this.center.y < this.startY){
-                        var downBullet = new Bullet({
-                            x: this.center.x,
-                            y: this.center.y - this.size.x / 2
-                        },
-                            {
-                                X: this.lastDirection,
-                                y: 0.5
-                            },
-                            this
-                        );
-                        this.game.addBody(downBullet);
-                    }
 
                     this.game.addBody(bullet);
                     // increment bullet Counter
                     this.bulletCtr++;
+
+                    //if jumping, fire a bullet
+                    if (this.center.y < this.startY) {
+                        var downBullet = new Bullet({
+                            x: this.center.x,
+                            y: this.center.y + this.size.x / 2
+                        }, {
+                            x: this.lastDirection,
+                            y: 2.5
+                        },// add reference so we know who to attack
+                            this);
+                        this.game.addBody(downBullet);
+                    }
                 }
 
                 // only call the sound the first time.
@@ -188,10 +185,6 @@ function initialize() {
                     document.getElementById('sound').play();
                 }
 
-                /*console.log(this.game);
-               console.log(this.game.shootSound);
-               this.game.shootSound.load();
-               this.game.shootSound.play();*/
             }
             // if space bar not down, reset the counter
             if (!this.keyboarder.isDown(this.keyboarder.KEYS.SPACE) && this.bulletCtr > 0) {
@@ -278,14 +271,11 @@ function initialize() {
         };
 
         this.tankDir;
-
         if (center.x > this.gameSize.x / 2) {
             this.tankDir = 1;
         } else {
             this.tankDir = -1;
         }
-
-        console.log("Centre.x is " + center.x + " and tank Dir is " + this.tankDir);
         this.speedX = 0.3;
         this.bodyType = "badGuy";
     };
@@ -340,22 +330,9 @@ function initialize() {
     };
 
     var colliding = function (b1, b2) {
-        return (b1.bodyType != b2.bodyType) && !(b1 === b2 || b1.center.x + b1.size.x / 2 < b2.center.x - b2.size.x / 2 || b1.center.y + b1.size.y / 2 < b2.center.y - b2.size.x / 2 || b1.center.x - b1.size.x / 2 > b2.center.x + b2.size.x / 2 || b1.center.y - b1.size.y / 2 > b2.center.y + b2.size.x / 2);
+        return (b1.bodyType != b2.bodyType) && !(b1 === b2 || b1.center.x + b1.size.x / 2 < b2.center.x - b2.size.x / 2 || b1.center.y + b1.size.y / 2 < b2.center.y - b2.size.y / 2 || b1.center.x - b1.size.x / 2 > b2.center.x + b2.size.x / 2 || b1.center.y - b1.size.y / 2 > b2.center.y + b2.size.y / 2);
+        //return (b1.bodyType != b2.bodyType) && !(b1 === b2 || b1.center.x + b1.size.x / 2 < b2.center.x - b2.size.x / 2 || b1.center.y + b1.size.y / 2 < b2.center.y - b2.size.x / 2 || b1.center.x - b1.size.x / 2 > b2.center.x + b2.size.x / 2 || b1.center.y - b1.size.y / 2 > b2.center.y + b2.size.x / 2);
     };
-
-    /*var loadSound = function (url, callback) {
-       console.log("ben");
-       var loaded = function () {
-           callback(sound);
-           sound.removeEventListener('canplaythrough', loaded);
-       }
-       console.log(callback);
-       console.log(loaded);
-       var sound = new Audio(url);
-       console.log(sound);
-       sound.addEventListener('canplaythrough', loaded);
-       sound.load();
-    };*/
 
     new Game("screen");
 };
